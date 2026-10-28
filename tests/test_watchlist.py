@@ -1,10 +1,12 @@
 """Tests for the watchlist functionality."""
 
+from datetime import datetime, timezone, timedelta
+
 import pytest
 from app import create_app, db
 from models import User, Film, WatchlistEntry
 from services.collection_service import FilmNotFoundError
-from services.watchlist_service import add_to_watchlist
+from services.watchlist_service import add_to_watchlist, get_watchlist
 
 
 @pytest.fixture
@@ -62,3 +64,28 @@ def test_add_to_watchlist_defaults_to_private(app, sample_user, sample_film):
         persisted = db.session.get(WatchlistEntry, entry_id)
         assert persisted.public is False
         assert persisted.to_dict()["public"] is False
+
+
+def test_get_watchlist_returns_newest_first(app, sample_user):
+    """Recent additions come first even when alphabetical order differs."""
+    with app.app_context():
+        older_film = Film(title="Alien", year=1979)
+        newer_film = Film(title="Spirited Away", year=2001)
+        db.session.add_all([older_film, newer_film])
+        db.session.commit()
+
+        later = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        earlier = later - timedelta(days=1)
+        db.session.add_all([
+            WatchlistEntry(
+                user_id=sample_user, film_id=older_film.id, date_added=earlier,
+            ),
+            WatchlistEntry(
+                user_id=sample_user, film_id=newer_film.id, date_added=later,
+            ),
+        ])
+        db.session.commit()
+
+        watchlist = get_watchlist(sample_user)
+
+        assert [film["title"] for film in watchlist] == ["Spirited Away", "Alien"]
