@@ -2,7 +2,7 @@
 
 import pytest
 from app import create_app, db
-from models import User, Film
+from models import User, Film, WatchlistEntry
 from services.collection_service import FilmNotFoundError
 from services.watchlist_service import add_to_watchlist
 
@@ -50,3 +50,15 @@ def test_add_to_watchlist_nonexistent_film_raises(app, sample_user):
 
         with pytest.raises(FilmNotFoundError):
             add_to_watchlist(user_id=sample_user, film_id=fake_film_id)
+
+
+def test_add_to_watchlist_defaults_to_private(app, sample_user, sample_film):
+    """New additions persist and serialize the private visibility default."""
+    with app.app_context():
+        entry = add_to_watchlist(user_id=sample_user, film_id=sample_film)
+        entry_id = entry.id
+        db.session.expire_all()
+
+        persisted = db.session.get(WatchlistEntry, entry_id)
+        assert persisted.public is False
+        assert persisted.to_dict()["public"] is False
