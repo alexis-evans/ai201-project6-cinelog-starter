@@ -6,7 +6,10 @@ import pytest
 from app import create_app, db
 from models import User, Film, WatchlistEntry
 from services.collection_service import FilmNotFoundError
-from services.watchlist_service import add_to_watchlist, get_watchlist
+from services.watchlist_service import (
+    add_to_watchlist, get_watchlist, remove_from_watchlist,
+    AlreadyInWatchlistError, NotInWatchlistError,
+)
 
 
 @pytest.fixture
@@ -89,3 +92,32 @@ def test_get_watchlist_returns_newest_first(app, sample_user):
         watchlist = get_watchlist(sample_user)
 
         assert [film["title"] for film in watchlist] == ["Spirited Away", "Alien"]
+
+
+def test_remove_from_watchlist_preserves_other_users(app, sample_user, sample_film):
+    with app.app_context():
+        other = User(username="other", email="other@example.com")
+        db.session.add(other)
+        db.session.commit()
+        add_to_watchlist(sample_user, sample_film)
+        other_entry = add_to_watchlist(other.id, sample_film)
+        other_entry_id = other_entry.id
+
+        assert remove_from_watchlist(sample_user, sample_film) is True
+        db.session.expire_all()
+        assert WatchlistEntry.query.filter_by(user_id=sample_user).count() == 0
+        assert db.session.get(WatchlistEntry, other_entry_id) is not None
+
+
+def test_remove_from_watchlist_twice_raises(app, sample_user, sample_film):
+    with app.app_context():
+        add_to_watchlist(sample_user, sample_film)
+        remove_from_watchlist(sample_user, sample_film)
+        with pytest.raises(NotInWatchlistError):
+            remove_from_watchlist(sample_user, sample_film)
+
+
+def test_remove_from_watchlist_unknown_film_raises(app, sample_user):
+    with app.app_context():
+        with pytest.raises(NotInWatchlistError):
+            remove_from_watchlist(sample_user, "00000000-0000-0000-0000-000000000000")
