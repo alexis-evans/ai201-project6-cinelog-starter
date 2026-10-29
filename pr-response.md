@@ -1,5 +1,9 @@
 # PR Response Doc — CineLog Watchlist Feature
 
+## git log --oneline
+
+![Terminal screenshot showing the CineLog repository git log in one-line format, with recent commits listed in chronological order. The dark terminal window provides the surrounding context; no additional readable text is visible beyond the commit log.](cinelog_commit_history.png)
+
 ## AI Usage
 
 I used AI to inspect the codebase and review my responses. For Comment 4, I chose private-by-default and wrote the reasoning first; AI helped clarify the distinction between a stored visibility flag and access control, added a regression test, and updated the implementation and verification notes. My final position remains based on my expectation that saving a film records a personal viewing intention. For Comment 5, I chose newest-first and wrote my reasoning before AI assistance. AI preserved that decision, documented the ordering, and added a regression test using explicit timestamps and titles whose alphabetical order differs from their date-added order. For the stretch work, AI implemented removal and explicit visibility, added service and endpoint tests, updated this document, and created separate conventional commits for implementations, tests, and documentation.
