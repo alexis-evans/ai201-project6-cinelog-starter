@@ -54,11 +54,11 @@ python -m pytest tests/ -v
 
 ## Comment 6 — Rebase
 
-**What conflicted: Pending**
+**What conflicted:** During the rebase onto `origin/main`, `models.py` conflicted because the watchlist branch retained integer film IDs while main had migrated film IDs to UUID strings.
 
-**How I resolved it: Pending**
+**How I resolved it:** Kept main's UUID definitions for `Film.id` and `CollectionEntry.film_id`, and used `db.String(36)` for `WatchlistEntry.film_id` while preserving its foreign key and index. Preserved the watchlist relationships and serialization, and the later private-default change. After completing the rebase, updated the service argument documentation and endpoint request example to describe UUID strings. The model resolution was incorporated into the replayed feature commit; the remaining UUID documentation updates are ready for a separate `fix:` commit.
 
-**How I verified no conflict remains: Pending**
+**How I verified no conflict remains:** Confirmed `origin/main` is an ancestor of the feature branch, no merge commits appear in `origin/main..HEAD`, and no conflict markers remain in the tracked Python and Markdown files. Ran `python -m pytest tests/ -v`: all seven tests passed. Also created a fresh in-memory database and verified that a generated film ID parses as a UUID, round-trips through the watchlist service, and is backed by string columns for all three film-ID fields. `git diff --check` passed.
 
 ## PR Description
 
