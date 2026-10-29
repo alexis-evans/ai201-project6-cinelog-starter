@@ -121,3 +121,16 @@ def test_remove_from_watchlist_unknown_film_raises(app, sample_user):
     with app.app_context():
         with pytest.raises(NotInWatchlistError):
             remove_from_watchlist(sample_user, "00000000-0000-0000-0000-000000000000")
+
+
+def test_add_to_watchlist_duplicate_raises(app, sample_user, sample_film):
+    """A repeated addition raises without creating an extra database row."""
+    with app.app_context():
+        original = add_to_watchlist(sample_user, sample_film)
+        with pytest.raises(AlreadyInWatchlistError):
+            add_to_watchlist(sample_user, sample_film)
+        entries = WatchlistEntry.query.filter_by(
+            user_id=sample_user, film_id=sample_film
+        ).all()
+        assert len(entries) == 1
+        assert entries[0].id == original.id
