@@ -134,3 +134,47 @@ def test_add_to_watchlist_duplicate_raises(app, sample_user, sample_film):
         ).all()
         assert len(entries) == 1
         assert entries[0].id == original.id
+
+
+@pytest.mark.parametrize("public", [True, False])
+def test_add_endpoint_persists_explicit_visibility(app, sample_user, sample_film, public):
+    response = app.test_client().post(
+        f"/watchlist/{sample_user}/add",
+        json={"film_id": sample_film, "public": public},
+    )
+    assert response.status_code == 201
+    assert response.get_json()["public"] is public
+    with app.app_context():
+        db.session.expire_all()
+        entry = WatchlistEntry.query.filter_by(
+            user_id=sample_user, film_id=sample_film
+        ).one()
+        assert entry.public is public
+
+
+def test_add_endpoint_defaults_to_private(app, sample_user, sample_film):
+    response = app.test_client().post(
+        f"/watchlist/{sample_user}/add", json={"film_id": sample_film},
+    )
+    assert response.status_code == 201
+    assert response.get_json()["public"] is False
+
+
+@pytest.mark.parametrize("public", ["false", "true", 0, 1, None, [], {}])
+def test_add_endpoint_rejects_nonboolean_visibility(app, sample_user, sample_film, public):
+    response = app.test_client().post(
+        f"/watchlist/{sample_user}/add",
+        json={"film_id": sample_film, "public": public},
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "public must be a boolean"
+    with app.app_context():
+        assert WatchlistEntry.query.count() == 0
+
+
+@pytest.mark.parametrize("public", ["false", 0, None])
+def test_add_service_rejects_nonboolean_visibility(app, sample_user, sample_film, public):
+    with app.app_context():
+        with pytest.raises(ValueError, match="public must be a boolean"):
+            add_to_watchlist(sample_user, sample_film, public=public)
+        assert WatchlistEntry.query.count() == 0
