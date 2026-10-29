@@ -73,3 +73,26 @@ def get_watchlist(user_id):
         result.append(film_dict)
 
     return result
+
+
+class NotInWatchlistError(Exception):
+    """Raised when the requested film is not on this user's watchlist."""
+    pass
+
+
+def remove_from_watchlist(user_id, film_id):
+    """Remove a user's film entry, returning True or raising NotInWatchlistError.
+
+    Both IDs are UUID strings. Follows remove_from_collection(): a missing
+    entry, including an unknown film ID, raises the domain-specific error.
+    """
+    entry = WatchlistEntry.query.filter_by(
+        user_id=user_id, film_id=film_id
+    ).first()
+    if entry is None:
+        raise NotInWatchlistError(
+            f"Film '{film_id}' is not in this user's watchlist"
+        )
+    db.session.delete(entry)
+    db.session.commit()
+    return True
